@@ -1,0 +1,27 @@
+---
+import Base from "../../layouts/Base.astro";
+import { sutraData, sutraUrl } from "../../lib/data";
+
+const rows = Object.entries(sutraData.sutras).map(([id, s]) => ({
+  id, title: s.title ?? id, by: s.by, talks: s.talks.length,
+  quotes: s.talks.reduce((a, t) => a + t.quotes.length, 0), home: s.talks.some((t) => t.home),
+}));
+const home = rows.filter((r) => r.home).sort((a, b) => b.talks - a.talks);
+const cited = rows.filter((r) => !r.home).sort((a, b) => b.talks - a.talks || b.quotes - a.quotes);
+---
+<Base title="引用經論" description="各講引用的藏經典籍，以及引用它們的講次與經文。">
+  <h1>引用經論</h1>
+  <p class="muted">筆記所引用、並已對照 CBETA 的經論。點進去可看到哪些講次引用了它，以及所引的經文原句。</p>
+  <h2 class="section-title">講經本經</h2>
+  <ul class="sutra-list">
+    {home.map((r) => (
+      <li><a href={sutraUrl(r.id)}>{r.title}</a><span>{r.id}{r.by ? `・${r.by}` : ""}</span><em>{r.talks} 講・引文 {r.quotes} 則</em></li>
+    ))}
+  </ul>
+  <h2 class="section-title">其他引用經論（{cited.length}）</h2>
+  <ul class="sutra-list">
+    {cited.map((r) => (
+      <li><a href={sutraUrl(r.id)}>{r.title}</a><span>{r.id}{r.by ? `・${r.by}` : ""}</span><em>{r.talks} 講{r.quotes ? `・引文 ${r.quotes} 則` : ""}</em></li>
+    ))}
+  </ul>
+</Base>

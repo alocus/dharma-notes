@@ -1,0 +1,137 @@
+---
+import Base from "../../../../layouts/Base.astro";
+import {
+  allLessons, url, lessonUrl, seriesUrl, lessonTitle, refTitle, lessonByKey, clip, noteMarkdown, lessonExtra,
+  sutraData, sutraUrl, entityUrl, hasEntity, cbetaUrl, channelLabel, multiChannel, type Located,
+} from "../../../../lib/data";
+import { renderNote } from "../../../../lib/render";
+
+export function getStaticPaths() {
+  return allLessons().filter((x) => x.l.has_note)
+    .map((x) => ({ params: { ch: x.c.slug, series: x.s.slug, no: x.l.no }, props: { x } }));
+}
+const { x } = Astro.props as { x: Located };
+const { c, s, l, key } = x;
+const { html, toc } = renderNote(noteMarkdown(key));
+const extra = lessonExtra(key);
+const noted = s.lessons.filter((y) => y.has_note);
+const i = noted.findIndex((y) => y.no === l.no);
+const prev = noted[i - 1], next = noted[i + 1];
+const sibling = (no: string) => `${c.slug}/${s.slug}/${no}`;
+const title = lessonTitle(s, l);
+const rel = extra.related;
+const linkedKeys = new Set(rel.linked.map((r) => r.key));
+const sameTopic = rel.same_topic.filter((r) => !linkedKeys.has(r.key)).slice(0, 6);
+const refScope = (k: string) => clip(lessonByKey(k)?.l.scope ?? "", 34);
+const names = extra.names.filter((n) => hasEntity(n.type, n.name));
+const sutraTitle = (id: string) => sutraData.sutras[id]?.title ?? id;
+---
+<Base title={title} description={l.scope || title} wide>
+  <div class="reader">
+    <nav class="toc" aria-label="目次">
+      <p class="toc-h">目次</p>
+      <ol>{toc.map((t) => <li><a href={`#${t.id}`}>{t.text}</a></li>)}</ol>
+    </nav>
+
+    <article class="reader-main" data-pagefind-body
+      data-transcript={url(`data/${key}.json`)} data-video={l.video_id ?? ""}>
+      <div class="crumbs">
+        <a href={url("/")}>首頁</a> ›{multiChannel && <> <a href={url(`${c.slug}/`)}>{channelLabel(c)}</a> ›</>}
+        <a href={seriesUrl(c, s)}>{s.name}</a> › 第{Number(l.no)}講
+      </div>
+      <header class="note-head">
+        <h1 data-pagefind-meta="title">{title}</h1>
+        <div class="note-meta">
+          {s.teacher && <span>{s.teacher}</span>}
+          {l.date && <span>{l.date}</span>}
+          {l.duration && <span>時長 {l.duration}</span>}
+          {s.home_sutra_id && <a href={sutraUrl(s.home_sutra_id)}>{s.home_sutra_id}</a>}
+          <span hidden data-pagefind-filter="系列">{s.name}</span>
+          <span hidden data-pagefind-filter="類型">筆記</span>
+          {multiChannel && <span hidden data-pagefind-filter="講者">{channelLabel(c)}</span>}
+        </div>
+        {l.scope && <p class="scope"><b>本講範圍</b>{l.scope}</p>}
+        <div class="actions">
+          {l.video_id && <button class="btn" type="button" data-open-player>▶ 觀看影片</button>}
+          <a class="btn" href="transcript/">逐字稿</a>
+          <button class="btn" type="button" data-toggle-cites aria-pressed="true">出處標記：開</button>
+        </div>
+      </header>
+
+      {l.video_id && (
+        <div class="player" id="player">
+          <div class="player-frame"><div id="yt"></div></div>
+          <div class="player-bar">
+            <span>點筆記中的 <span style="color:var(--mark)">●</span> 出處標記，可跳到影片該處</span>
+            <span><button type="button" data-mini>縮小</button>　<button type="button" data-close-player>關閉</button></span>
+          </div>
+        </div>
+      )}
+
+      <div class="prose" set:html={html} />
+
+      {extra.proof.length > 0 && (
+        <details class="proof" data-pagefind-ignore>
+          <summary>經文原文對照（已核對 CBETA 的引文 {extra.proof.length} 則）</summary>
+          <ol>
+            {extra.proof.map((q) => (
+              <li>
+                <q>{q.text}</q>
+                <span class="src">
+                  {q.attrib}
+                  {q.cbeta && <> <a href={sutraUrl(q.cbeta)}>{sutraTitle(q.cbeta)}</a> <a href={cbetaUrl(q.cbeta)} target="_blank" rel="noopener">✓ {q.cbeta}</a></>}
+                  {q.line && <> ・<a href={`transcript/#L${q.line}`}>逐字稿</a></>}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
+      <nav class="pager" data-pagefind-ignore>
+        {prev ? <a href={lessonUrl(sibling(prev.no))}><small>← 上一講</small>{lessonTitle(s, prev)}</a> : <span />}
+        {next ? <a class="next" href={lessonUrl(sibling(next.no))}><small>下一講 →</small>{lessonTitle(s, next)}</a> : <span />}
+      </nav>
+    </article>
+
+    <aside class="aside" data-pagefind-ignore>
+      {rel.linked.length > 0 && (
+        <section>
+          <h4>筆記提到的講次</h4>
+          <ul>{rel.linked.map((r) => <li><a href={lessonUrl(r.key)}>{refTitle(r.key)}</a><small>{refScope(r.key)}</small></li>)}</ul>
+        </section>
+      )}
+      {sameTopic.length > 0 && (
+        <section>
+          <h4>相關講次</h4>
+          <ul>{sameTopic.map((r) => (
+            <li><a href={lessonUrl(r.key)} title={lessonByKey(r.key)?.l.scope}>{refTitle(r.key)}</a><small>{r.shared.length ? `同談：${r.shared.join("、")}` : refScope(r.key)}</small></li>
+          ))}</ul>
+        </section>
+      )}
+      {rel.same_passage.length > 0 && (
+        <section>
+          <h4>同段經文，他講亦講</h4>
+          <ul>{rel.same_passage.slice(0, 6).map((r) => (
+            <li><a href={lessonUrl(r.key)}>{refTitle(r.key)}</a><small>「{clip(r.quote, 22)}」・{sutraTitle(r.cbeta)}</small></li>
+          ))}</ul>
+        </section>
+      )}
+      {names.length > 0 && (
+        <section>
+          <h4>本講名相・人物</h4>
+          <p class="chips">{names.map((n) => <a href={entityUrl(n.type, n.name)}>{n.name}</a>)}</p>
+        </section>
+      )}
+      {extra.canon_cited.length > 0 && (
+        <section>
+          <h4>本講引用經論（{extra.canon_cited.length}）</h4>
+          <ul>{extra.canon_cited.slice(0, 12).map((id) => (
+            <li><a href={sutraUrl(id)}>{sutraTitle(id)}</a><small>{id}</small></li>
+          ))}</ul>
+        </section>
+      )}
+    </aside>
+  </div>
+  <script is:inline src={url("scripts/reader.js")} defer></script>
+</Base>

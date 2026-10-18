@@ -1,0 +1,46 @@
+---
+import Base from "../layouts/Base.astro";
+import SeriesCards from "../components/SeriesCards.astro";
+import { site, url, lessonUrl, lessonTitle, allLessons, entities, sutraData, channelLabel } from "../lib/data";
+
+const lessons = allLessons();
+const nNotes = lessons.filter((x) => x.l.has_note).length;
+const nTr = lessons.filter((x) => x.l.has_transcript).length;
+const nSeries = site.channels.reduce((a, c) => a + c.series.filter((s) => s.lessons.some((l) => l.has_note)).length, 0);
+const nNames = Object.values(entities).reduce((a, d) => a + Object.keys(d).length, 0);
+const latest = lessons.filter((x) => x.l.has_note && x.l.date)
+  .sort((a, b) => (b.l.date! > a.l.date! ? 1 : -1)).slice(0, 6);
+---
+<Base title={site.title}>
+  <section class="hero">
+    <h1>{site.channels.length === 1 ? `${channelLabel(site.channels[0])}${site.title}` : site.title}</h1>
+    <p>{site.channels.length === 1 && site.channels[0].teacher ? `${site.channels[0].teacher}` : ""}{site.tagline}</p>
+    <div class="stats">
+      <div><b>{nSeries}</b><span>部經論系列</span></div>
+      <div><b>{nNotes}</b><span>講學習筆記</span></div>
+      <div><b>{nTr}</b><span>講逐字稿</span></div>
+      <a href={url("e/")}><b>{nNames}</b><span>名相・人物・地名</span></a>
+      <a href={url("sutra/")}><b>{Object.keys(sutraData.sutras).length}</b><span>部引用經論</span></a>
+    </div>
+  </section>
+
+  {site.channels.map((c) => (
+    <section>
+      <h2 class="section-title">{site.channels.length > 1 ? <a href={url(`${c.slug}/`)}>{channelLabel(c)}・{c.name}</a> : "經論系列"}</h2>
+      <SeriesCards c={c} />
+    </section>
+  ))}
+
+  <h2 class="section-title">最近的講次</h2>
+  <ul class="lesson-list">
+    {latest.map(({ s, l, key, c }) => (
+      <li>
+        <a href={lessonUrl(key)}>
+          <span class="no">{Number(l.no)}</span>
+          <span class="t">{lessonTitle(s, l)}</span>
+          <span class="meta">{site.channels.length > 1 ? `${channelLabel(c)}・` : ""}{l.date}{l.duration ? `・${l.duration}` : ""}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</Base>

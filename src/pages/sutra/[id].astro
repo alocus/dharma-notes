@@ -1,0 +1,53 @@
+---
+import Base from "../../layouts/Base.astro";
+import {
+  sutraData, url, lessonUrl, transcriptUrl, lessonByKey, lessonTitle, seriesUrl, cbetaUrl, channelLabel, multiChannel,
+  type SutraEntry,
+} from "../../lib/data";
+
+export function getStaticPaths() {
+  return Object.entries(sutraData.sutras).map(([id, s]) => ({ params: { id }, props: { id, s } }));
+}
+const { id, s } = Astro.props as { id: string; s: SutraEntry };
+const title = s.title ?? id;
+const rows = s.talks.map((t) => ({ ...t, x: lessonByKey(t.key)! })).filter((t) => t.x);
+const quoting = rows.filter((t) => t.quotes.length);
+const citing = rows.filter((t) => !t.quotes.length);
+const homeSeries = [...new Map(rows.filter((t) => t.home).map((t) => [t.x.s.slug, t.x])).values()];
+const label = (t: (typeof rows)[number]) => (multiChannel ? channelLabel(t.x.c) + "・" : "") + lessonTitle(t.x.s, t.x.l);
+---
+<Base title={title} description={`《${title}》${id}：${rows.length} 講引用`}>
+  <div class="crumbs"><a href={url("sutra/")}>引用經論</a> › {id}</div>
+  <h1>《{title}》</h1>
+  <div class="note-meta">
+    <span>{id}</span>
+    {s.by && <span>{s.by}</span>}
+    <span>{rows.length} 講引用</span>
+    <a href={cbetaUrl(id)} target="_blank" rel="noopener">在 CBETA 閱讀全文 ↗</a>
+  </div>
+  {homeSeries.length > 0 && (
+    <p class="scope"><b>講經系列</b>{homeSeries.map((x, i) => <>{i > 0 && "、"}<a href={seriesUrl(x.c, x.s)}>{x.s.name}</a></>)}</p>
+  )}
+
+  {quoting.length > 0 && (
+    <section>
+      <h2 class="section-title">引用的經文（{quoting.length} 講）</h2>
+      <ul class="mention-list">
+        {quoting.map((t) => (
+          <li>
+            <a href={lessonUrl(t.key)}>{label(t)}</a>
+            {t.quotes.map((q) => (
+              <p class="quote"><q>{q.text}</q>{q.line && <a class="muted" href={`${transcriptUrl(t.key)}#L${q.line}`}> 逐字稿</a>}</p>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+  {citing.length > 0 && (
+    <section>
+      <h2 class="section-title">也提到此經的講次（{citing.length}）</h2>
+      <p class="chips">{citing.map((t) => <a href={lessonUrl(t.key)}>{label(t)}</a>)}</p>
+    </section>
+  )}
+</Base>

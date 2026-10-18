@@ -1,0 +1,35 @@
+---
+import Base from "../../../layouts/Base.astro";
+import { allSeries, url, lessonUrl, transcriptUrl, channelLabel, multiChannel, type Series, type Channel } from "../../../lib/data";
+
+export function getStaticPaths() {
+  return allSeries().map(({ c, s }) => ({ params: { ch: c.slug, series: s.slug }, props: { c, s } }));
+}
+const { c, s } = Astro.props as { c: Channel; s: Series };
+const hasNotes = s.lessons.some((l) => l.has_note);
+---
+<Base title={s.name} description={`${channelLabel(c)}講《${s.name}》，共 ${s.lessons.length} 講`}>
+  <div class="crumbs"><a href={url("/")}>首頁</a> ›{multiChannel && <> <a href={url(`${c.slug}/`)}>{channelLabel(c)}</a> ›</>}</div>
+  <h1>{s.name}</h1>
+  <div class="note-meta">
+    {s.teacher && <span>講師：{s.teacher}</span>}
+    {s.home_sutra && <span>本經：{s.home_sutra}</span>}
+    <span>{s.lessons.length} 講</span>
+  </div>
+  {!hasNotes && <p class="raw-note" style="margin-top:16px">此系列的筆記尚在整理中，目前只有逐字稿（未經整理的字幕辨識稿）。</p>}
+  <ul class="lesson-list" style="margin-top:24px">
+    {s.lessons.map((l) => {
+      const key = `${c.slug}/${s.slug}/${l.no}`;
+      return (
+        <li>
+          <a href={l.has_note ? lessonUrl(key) : transcriptUrl(key)}>
+            <span class="no">{Number(l.no)}</span>
+            <span class="t">{s.lessons.length === 1 ? l.title : `第${Number(l.no)}講`}{!l.has_note && <> <span class="pill">逐字稿</span></>}</span>
+            {l.scope && <span class="scope">{l.scope}</span>}
+            <span class="meta">{[l.date, l.duration].filter(Boolean).join("・")}</span>
+          </a>
+        </li>
+      );
+    })}
+  </ul>
+</Base>

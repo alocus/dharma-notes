@@ -1,0 +1,57 @@
+---
+import "../styles/site.css";
+import { url, site } from "../lib/data";
+
+interface Props { title: string; description?: string; wide?: boolean }
+const { title, description = site.tagline, wide = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title === site.title ? site.title : `${title}｜${site.title}`}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="sitemap" href={url("sitemap-index.xml")} />
+    <link rel="icon" href={url("favicon.svg")} type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet" />
+    <script is:inline>
+      try { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <header class="site-head">
+      <div class="site-head-inner">
+        <a class="brand" href={url("/")}>{site.title}</a>
+        <nav>
+          <a href={url("/")}>系列</a>
+          <a href={url("e/")}>名相</a>
+          <a href={url("sutra/")}>經論</a>
+          <a href={url("search/")}>搜尋</a>
+          <a href={url("guide/")}>說明</a>
+          <button class="theme-toggle" type="button" aria-label="切換深淺色">◐</button>
+        </nav>
+      </div>
+    </header>
+    <main class:list={["page", { wide }]}>
+      <slot />
+    </main>
+    <footer class="site-foot">
+      <p>內容整理自法師公開講經影片。筆記為學習輔助：法義以法師原講為準，經文字句以 CBETA 為準。<a href={url("guide/")}>閱讀說明</a></p>
+    </footer>
+    <script is:inline>
+      document.querySelector(".theme-toggle").addEventListener("click", () => {
+        const root = document.documentElement;
+        const dark = root.dataset.theme
+          ? root.dataset.theme === "dark"
+          : matchMedia("(prefers-color-scheme: dark)").matches;
+        root.dataset.theme = dark ? "light" : "dark";
+        try { localStorage.setItem("theme", root.dataset.theme); } catch (e) {}
+      });
+    </script>
+  </body>
+</html>

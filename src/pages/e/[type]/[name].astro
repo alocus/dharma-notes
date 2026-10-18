@@ -1,0 +1,50 @@
+---
+import Base from "../../../layouts/Base.astro";
+import {
+  entities, ENTITY_TYPES, url, lessonUrl, lessonByKey, lessonTitle, seriesUrl, channelLabel, multiChannel,
+  type EntityEntry,
+} from "../../../lib/data";
+
+export function getStaticPaths() {
+  return ENTITY_TYPES.flatMap((type) =>
+    Object.entries(entities[type] ?? {}).map(([name, e]) => ({ params: { type, name }, props: { type, name, e } })));
+}
+const { type, name, e } = Astro.props as { type: string; name: string; e: EntityEntry };
+
+// group the talks by series, series ordered by how much they discuss the name
+const groups = new Map<string, { label: string; href: string; total: number; talks: typeof rows }>();
+const rows = e.talks.map((t) => ({ ...t, x: lessonByKey(t.key)! })).filter((t) => t.x);
+for (const t of rows) {
+  const gk = `${t.x.c.slug}/${t.x.s.slug}`;
+  const g = groups.get(gk) ?? { label: (multiChannel ? channelLabel(t.x.c) + "・" : "") + t.x.s.name, href: seriesUrl(t.x.c, t.x.s), total: 0, talks: [] };
+  g.total += t.n; g.talks.push(t); groups.set(gk, g);
+}
+const ordered = [...groups.values()].sort((a, b) => b.total - a.total);
+for (const g of ordered) g.talks.sort((a, b) => Number(a.x.l.no) - Number(b.x.l.no));
+const gloss = e.gloss && e.gloss.length > 420 ? e.gloss.slice(0, 420) + "…" : e.gloss;
+---
+<Base title={name} description={`${name}：${rows.length} 講談到${e.gloss ? "。" + e.gloss.slice(0, 60) : ""}`}>
+  <div class="crumbs"><a href={url("e/")}>名相・人物・地名</a> › {type}</div>
+  <h1>{name}</h1>
+  <p class="muted">{type}・{rows.length} 講談到・共 {e.talks.reduce((a, t) => a + t.n, 0)} 處</p>
+  {gloss && (
+    <blockquote class="gloss">
+      <p>{gloss}</p>
+      <cite>—— 丁福保《佛學大辭典》</cite>
+    </blockquote>
+  )}
+  <p><a class="btn" href={url(`search/?q=${encodeURIComponent(name)}`)}>在筆記與逐字稿中搜尋「{name}」</a></p>
+  {ordered.map((g) => (
+    <section>
+      <h2 class="section-title"><a href={g.href}>{g.label}</a> <span class="muted" style="font-size:.85rem">{g.talks.length} 講</span></h2>
+      <ul class="mention-list">
+        {g.talks.map((t) => (
+          <li>
+            <a href={lessonUrl(t.key)}>{lessonTitle(t.x.s, t.x.l)}</a><span class="muted">・{t.n} 處</span>
+            {t.snip && <p>{t.snip}</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Base>

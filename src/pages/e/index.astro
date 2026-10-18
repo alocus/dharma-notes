@@ -1,0 +1,28 @@
+---
+import Base from "../../layouts/Base.astro";
+import { entities, entityUrl, ENTITY_TYPES } from "../../lib/data";
+
+const groups = ENTITY_TYPES.filter((t) => entities[t]).map((t) => ({
+  type: t,
+  items: Object.entries(entities[t])
+    .map(([name, e]) => ({ name, n: e.talks.length, gloss: !!e.gloss }))
+    .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, "zh-Hant")),
+}));
+---
+<Base title="名相・人物・地名" description="筆記中出現的名相、人物、地名，以及講到它們的各講。">
+  <h1>名相・人物・地名</h1>
+  <p class="muted">筆記中出現在兩講以上的名相、人物與地名。點進去可看到每一講怎麼談它；有「釋」字的附丁福保《佛學大辭典》釋義。</p>
+  <nav class="tabs">{groups.map((g) => <a href={`#${g.type}`}>{g.type}（{g.items.length}）</a>)}</nav>
+  {groups.map((g) => (
+    <section id={g.type}>
+      <h2 class="section-title">{g.type}</h2>
+      <p class="chips big">
+        {g.items.map((it) => (
+          <a href={entityUrl(g.type, it.name)} style={`--w:${Math.min(1, 0.35 + it.n / 60)}`}>
+            {it.name}<small>{it.n}</small>{it.gloss && <i>釋</i>}
+          </a>
+        ))}
+      </p>
+    </section>
+  ))}
+</Base>

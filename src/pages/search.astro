@@ -1,0 +1,24 @@
+---
+import Base from "../layouts/Base.astro";
+import { url } from "../lib/data";
+---
+<Base title="搜尋">
+  <div class="search-wrap">
+    <h1 style="font-size:1.5rem">搜尋筆記與逐字稿</h1>
+    <div id="search"></div>
+  </div>
+  <link href={url("pagefind/pagefind-ui.css")} rel="stylesheet" />
+  <script is:inline src={url("pagefind/pagefind-ui.js")}></script>
+  <script is:inline>
+    window.addEventListener("DOMContentLoaded", () => {
+      const ui = new PagefindUI({
+        element: "#search", showSubResults: true,
+        // the zh index holds single characters, so space them out to require every one (AND)
+        processTerm: (t) => t.replace(/([\u3400-\u9fff\uf900-\ufaff])(?=[\u3400-\u9fff\uf900-\ufaff])/g, "$1 "), showImages: false, resetStyles: false,
+        translations: { placeholder: "輸入經名、名相、人名…", zero_results: "找不到「[SEARCH_TERM]」", filters_label: "篩選" },
+      });
+      const q = new URLSearchParams(location.search).get("q");
+      if (q) { ui.triggerSearch(q); const i = document.querySelector("#search input"); if (i) i.value = q; }
+    });
+  </script>
+</Base>

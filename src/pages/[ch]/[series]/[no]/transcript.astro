@@ -1,0 +1,74 @@
+---
+import Base from "../../../../layouts/Base.astro";
+import {
+  allLessons, url, lessonUrl, seriesUrl, lessonTitle, transcript, fmtTime, channelLabel, multiChannel, type Located,
+} from "../../../../lib/data";
+import { renderLine } from "../../../../lib/render";
+
+export function getStaticPaths() {
+  return allLessons().filter((x) => x.l.has_transcript)
+    .map((x) => ({ params: { ch: x.c.slug, series: x.s.slug, no: x.l.no }, props: { x } }));
+}
+const { x } = Astro.props as { x: Located };
+const { c, s, l, key } = x;
+const data = transcript(key);
+const title = lessonTitle(s, l);
+// header block (title + metadata bullets) ends at the first "---"
+const hdrEnd = Math.max(0, data.lines.findIndex((x) => x.trim() === "---") + 1);
+const rows = data.lines
+  .map((text, i) => ({ n: i + 1, text }))
+  .filter((r) => r.n > hdrEnd && r.text.trim());
+// a line with no measured time inherits the last one before it
+let last: [number, number] | null = null;
+const timed = rows.map((r) => {
+  const own = data.t[String(r.n)];
+  if (own) last = own;
+  return { ...r, t: own ?? null, inherited: !own && last ? last : null };
+});
+const yt = l.video_id ? `https://www.youtube.com/watch?v=${l.video_id}` : null;
+---
+<Base title={`${title}・逐字稿`} description={`${title} 完整逐字稿`}>
+  <div class="crumbs">
+    <a href={url("/")}>首頁</a> ›{multiChannel && <> <a href={url(`${c.slug}/`)}>{channelLabel(c)}</a> ›</>}
+    <a href={seriesUrl(c, s)}>{s.name}</a> ›
+    {l.has_note ? <a href={lessonUrl(key)}>第{Number(l.no)}講</a> : <>第{Number(l.no)}講</>} › 逐字稿
+  </div>
+  <h1 style="font-size:1.5rem;margin:4px 0 8px">{title}・逐字稿</h1>
+  <div class="note-meta">
+    {l.date && <span>{l.date}</span>}
+    {l.duration && <span>時長 {l.duration}</span>}
+    {yt && <a href={yt} target="_blank" rel="noopener">YouTube 原影片</a>}
+    {l.has_note && <a href={lessonUrl(key)}>← 回到筆記</a>}
+  </div>
+  {l.raw
+    ? <p class="raw-note" style="margin:16px 0">這是字幕辨識的原始稿，尚未整理，錯字較多，也還沒有時間對照。</p>
+    : <p class="muted" style="font-size:.85rem;margin:12px 0 20px">左側時間點可跳到影片；把滑鼠移到段落上會顯示行號（筆記中的出處行號）。</p>}
+  <div class="ts" data-pagefind-body>
+    <span hidden data-pagefind-filter="系列">{s.name}</span>
+    <span hidden data-pagefind-filter="類型">逐字稿</span>
+    {multiChannel && <span hidden data-pagefind-filter="講者">{channelLabel(c)}</span>}
+    {timed.map((r) => {
+      const t = r.t ?? r.inherited;
+      const href = yt && t ? `${yt}&t=${t[0]}s` : `#L${r.n}`;
+      return (
+        <p id={`L${r.n}`} class={r.text.startsWith("> ") ? "q" : undefined}>
+          <a class="tc" href={href} target={yt && t ? "_blank" : undefined} rel="noopener">
+            <span class="tm">{t && r.t ? (t[1] ? "≈" : "") + fmtTime(t[0]) : ""}</span><span class="ln">行{r.n}</span>
+          </a>
+          <Fragment set:html={renderLine(r.text.replace(/^> /, ""))} />
+        </p>
+      );
+    })}
+  </div>
+  <script is:inline>
+    // 〔行N〕 counts physical lines, so N may be a blank one: snap to the nearest paragraph before it
+    (() => {
+      const m = location.hash.match(/^#L(\d+)$/);
+      if (!m || document.getElementById(location.hash.slice(1))) return;
+      for (let n = Number(m[1]); n > 0; n--) {
+        const el = document.getElementById("L" + n);
+        if (el) { el.classList.add("hl"); el.scrollIntoView({ block: "center" }); break; }
+      }
+    })();
+  </script>
+</Base>

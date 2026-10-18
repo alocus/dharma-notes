@@ -1,0 +1,16 @@
+---
+import Base from "../../layouts/Base.astro";
+import SeriesCards from "../../components/SeriesCards.astro";
+import { allChannels, url, channelLabel, type Channel } from "../../lib/data";
+
+export function getStaticPaths() {
+  return allChannels().map((c) => ({ params: { ch: c.slug }, props: { c } }));
+}
+const { c } = Astro.props as { c: Channel };
+---
+<Base title={`${channelLabel(c)}・${c.name}`}>
+  <div class="crumbs"><a href={url("/")}>首頁</a> ›</div>
+  <h1>{channelLabel(c)}・{c.name}</h1>
+  {c.teacher && <p class="muted">{c.teacher}</p>}
+  <SeriesCards c={c} />
+</Base>
