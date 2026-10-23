@@ -4,7 +4,6 @@ import { seriesUrl, type Channel } from "../lib/data";
 interface Props { c: Channel }
 const { c } = Astro.props;
 const noted = c.series.filter((s) => s.lessons.some((l) => l.has_note));
-const trOnly = c.series.filter((s) => !s.lessons.some((l) => l.has_note));
 const sutraName = (s: string | null) => s?.match(/《([^》]+)》/)?.[1] ?? null;
 ---
 <div class="cards">
@@ -15,16 +14,3 @@ const sutraName = (s: string | null) => s?.match(/《([^》]+)》/)?.[1] ?? null
     </a>
   ))}
 </div>
-{trOnly.length > 0 && (
-  <>
-    <h3 class="sub-title">僅有逐字稿</h3>
-    <div class="cards">
-      {trOnly.map((s) => (
-        <a class="card" href={seriesUrl(c, s)}>
-          <h3>{s.name}</h3>
-          <p>{s.lessons.length} 講逐字稿・筆記整理中</p>
-        </a>
-      ))}
-    </div>
-  </>
-)}
