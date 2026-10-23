@@ -6,6 +6,7 @@
     "export": "../mani/pipelines/knowledgebase/.venv/bin/python scripts/export.py",
     "dev": "astro dev",
     "build": "astro build && pagefind --site dist --force-language zh",
+    "index:dev": "pagefind --site dist --output-path public/pagefind --force-language zh",
     "preview": "astro preview"
   },
   "dependencies": {

@@ -1,8 +1,9 @@
 ---
 import Base from "../../../../layouts/Base.astro";
+import Notice from "../../../../components/Notice.astro";
 import {
   allLessons, url, lessonUrl, seriesUrl, lessonTitle, refTitle, lessonByKey, clip, noteMarkdown, lessonExtra,
-  sutraData, sutraUrl, entityUrl, hasEntity, cbetaUrl, channelLabel, multiChannel, type Located,
+  sutraData, sutraUrl, plain, entityUrl, hasEntity, cbetaUrl, channelLabel, multiChannel, type Located,
 } from "../../../../lib/data";
 import { renderNote } from "../../../../lib/render";
 
@@ -26,7 +27,7 @@ const refScope = (k: string) => clip(lessonByKey(k)?.l.scope ?? "", 34);
 const names = extra.names.filter((n) => hasEntity(n.type, n.name));
 const sutraTitle = (id: string) => sutraData.sutras[id]?.title ?? id;
 ---
-<Base title={title} description={l.scope || title} wide>
+<Base title={title} description={plain(l.scope) || title} wide>
   <div class="reader">
     <nav class="toc" aria-label="目次">
       <p class="toc-h">目次</p>
@@ -50,20 +51,23 @@ const sutraTitle = (id: string) => sutraData.sutras[id]?.title ?? id;
           <span hidden data-pagefind-filter="類型">筆記</span>
           {multiChannel && <span hidden data-pagefind-filter="講者">{channelLabel(c)}</span>}
         </div>
-        {l.scope && <p class="scope"><b>本講範圍</b>{l.scope}</p>}
+        {l.scope && <p class="scope"><b>本講範圍</b>{plain(l.scope)}</p>}
         <div class="actions">
-          {l.video_id && <button class="btn" type="button" data-open-player>▶ 觀看影片</button>}
+          {l.video_id && <button class="btn" type="button" data-open-player>▶ 播放影片</button>}
           <a class="btn" href="transcript/">逐字稿</a>
           <button class="btn" type="button" data-toggle-cites aria-pressed="true">出處標記：開</button>
         </div>
       </header>
 
       {l.video_id && (
-        <div class="player" id="player">
-          <div class="player-frame"><div id="yt"></div></div>
+        <div class="player open" id="player">
+          <div class="player-body">
+            <div class="player-frame"><div data-yt></div></div>
+            <div class="follow" data-follow data-pagefind-ignore tabindex="0" role="region" aria-label="逐字稿跟讀"><p class="muted">逐字稿載入中…</p></div>
+          </div>
           <div class="player-bar">
-            <span>點筆記中的 <span style="color:var(--mark)">●</span> 出處標記，可跳到影片該處</span>
-            <span><button type="button" data-mini>縮小</button>　<button type="button" data-close-player>關閉</button></span>
+            <span class="player-hint">點筆記中的 <span style="color:var(--mark)">●</span> 出處標記，或點下方逐字稿，可跳到影片該處</span>
+            <span><button type="button" data-toggle-follow aria-pressed="true">逐字稿：開</button>　<button type="button" data-mini>縮小</button>　<button type="button" data-close-player>關閉</button></span>
           </div>
         </div>
       )}
@@ -92,6 +96,8 @@ const sutraTitle = (id: string) => sutraData.sutras[id]?.title ?? id;
         {prev ? <a href={lessonUrl(sibling(prev.no))}><small>← 上一講</small>{lessonTitle(s, prev)}</a> : <span />}
         {next ? <a class="next" href={lessonUrl(sibling(next.no))}><small>下一講 →</small>{lessonTitle(s, next)}</a> : <span />}
       </nav>
+
+      <Notice />
     </article>
 
     <aside class="aside" data-pagefind-ignore>
@@ -133,5 +139,6 @@ const sutraTitle = (id: string) => sutraData.sutras[id]?.title ?? id;
       )}
     </aside>
   </div>
+  <script is:inline src={url("scripts/player.js")} defer></script>
   <script is:inline src={url("scripts/reader.js")} defer></script>
 </Base>

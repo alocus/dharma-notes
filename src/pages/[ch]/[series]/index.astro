@@ -1,6 +1,6 @@
 ---
 import Base from "../../../layouts/Base.astro";
-import { allSeries, url, lessonUrl, transcriptUrl, channelLabel, multiChannel, type Series, type Channel } from "../../../lib/data";
+import { allSeries, url, lessonUrl, transcriptUrl, channelLabel, multiChannel, type Series, type Channel, plain } from "../../../lib/data";
 
 export function getStaticPaths() {
   return allSeries().map(({ c, s }) => ({ params: { ch: c.slug, series: s.slug }, props: { c, s } }));
@@ -25,7 +25,7 @@ const hasNotes = s.lessons.some((l) => l.has_note);
           <a href={l.has_note ? lessonUrl(key) : transcriptUrl(key)}>
             <span class="no">{Number(l.no)}</span>
             <span class="t">{s.lessons.length === 1 ? l.title : `第${Number(l.no)}講`}{!l.has_note && <> <span class="pill">逐字稿</span></>}</span>
-            {l.scope && <span class="scope">{l.scope}</span>}
+            {l.scope && <span class="scope">{plain(l.scope)}</span>}
             <span class="meta">{[l.date, l.duration].filter(Boolean).join("・")}</span>
           </a>
         </li>

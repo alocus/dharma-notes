@@ -13,8 +13,9 @@ const { x } = Astro.props as { x: Located };
 const { c, s, l, key } = x;
 const data = transcript(key);
 const title = lessonTitle(s, l);
-// header block (title + metadata bullets) ends at the first "---"
-const hdrEnd = Math.max(0, data.lines.findIndex((x) => x.trim() === "---") + 1);
+// header block (frontmatter, title + metadata bullets) ends at the first "---" after the "# " title
+const titleAt = data.lines.findIndex((x) => x.startsWith("# "));
+const hdrEnd = Math.max(0, data.lines.findIndex((x, i) => i > titleAt && x.trim() === "---") + 1);
 const rows = data.lines
   .map((text, i) => ({ n: i + 1, text }))
   .filter((r) => r.n > hdrEnd && r.text.trim());
@@ -42,7 +43,16 @@ const yt = l.video_id ? `https://www.youtube.com/watch?v=${l.video_id}` : null;
   </div>
   {l.raw
     ? <p class="raw-note" style="margin:16px 0">這是字幕辨識的原始稿，尚未整理，錯字較多，也還沒有時間對照。</p>
-    : <p class="muted" style="font-size:.85rem;margin:12px 0 20px">左側時間點可跳到影片；把滑鼠移到段落上會顯示行號（筆記中的出處行號）。</p>}
+    : <p class="muted" style="font-size:.85rem;margin:12px 0 20px">點左側時間點，影片從該處播放；播放時，目前講到的段落會標示出來並自動捲動。把滑鼠移到段落上會顯示行號（筆記中的出處行號）。</p>}
+  {l.video_id && (
+    <div class="player open" id="player" data-video={l.video_id}>
+      <div class="player-frame"><div data-yt></div></div>
+      <div class="player-bar">
+        <span class="player-hint">{!l.raw && "播放時自動標示目前段落"}</span>
+        <span>{!l.raw && <><button type="button" data-toggle-follow aria-pressed="true">自動捲動：開</button>　</>}<button type="button" data-mini>縮小</button>　<button type="button" data-close-player>關閉</button></span>
+      </div>
+    </div>
+  )}
   <div class="ts" data-pagefind-body>
     <span hidden data-pagefind-filter="系列">{s.name}</span>
     <span hidden data-pagefind-filter="類型">逐字稿</span>
@@ -52,7 +62,7 @@ const yt = l.video_id ? `https://www.youtube.com/watch?v=${l.video_id}` : null;
       const href = yt && t ? `${yt}&t=${t[0]}s` : `#L${r.n}`;
       return (
         <p id={`L${r.n}`} class={r.text.startsWith("> ") ? "q" : undefined}>
-          <a class="tc" href={href} target={yt && t ? "_blank" : undefined} rel="noopener">
+          <a class="tc" href={href} target={yt && t ? "_blank" : undefined} rel="noopener" data-t={t ? t[0] : undefined}>
             <span class="tm">{t && r.t ? (t[1] ? "≈" : "") + fmtTime(t[0]) : ""}</span><span class="ln">行{r.n}</span>
           </a>
           <Fragment set:html={renderLine(r.text.replace(/^> /, ""))} />
@@ -69,6 +79,58 @@ const yt = l.video_id ? `https://www.youtube.com/watch?v=${l.video_id}` : null;
         const el = document.getElementById("L" + n);
         if (el) { el.classList.add("hl"); el.scrollIntoView({ block: "center" }); break; }
       }
+    })();
+  </script>
+  <script is:inline src={url("scripts/player.js")}></script>
+  <script is:inline>
+    // in-page player: time links seek it; the paragraphs being spoken are marked and kept in view
+    (() => {
+      const box = document.getElementById("player");
+      if (!box) return;
+      const player = window.notesPlayer(box, box.dataset.video);
+      player.ensure();
+      const ts = document.querySelector(".ts");
+      ts.addEventListener("click", (ev) => {
+        const a = ev.target.closest("a.tc[data-t]");
+        if (!a || ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
+        ev.preventDefault();
+        player.play(Number(a.dataset.t));
+      });
+
+      const btn = box.querySelector("[data-toggle-follow]");
+      if (!btn) return;
+      let follow = true, userScrolled = 0;
+      try { follow = localStorage.getItem("follow-ts") !== "0"; } catch (e) {}
+      const setFollow = (on) => {
+        follow = on;
+        btn.textContent = `自動捲動：${on ? "開" : "關"}`;
+        btn.setAttribute("aria-pressed", String(on));
+        try { localStorage.setItem("follow-ts", on ? "1" : "0"); } catch (e) {}
+      };
+      setFollow(follow);
+      btn.addEventListener("click", () => setFollow(!follow));
+      notesOnManualScroll(window, () => { userScrolled = Date.now(); });
+
+      const rows = [...ts.querySelectorAll("p")]
+        .map((p) => ({ p, t: Number(p.querySelector("a.tc")?.dataset.t ?? NaN) }))
+        .filter((r) => !Number.isNaN(r.t));
+      let active = [];
+      player.onTime((now) => {
+        let lo = 0, hi = rows.length - 1, k = -1;
+        while (lo <= hi) { const m = (lo + hi) >> 1; if (rows[m].t <= now) { k = m; lo = m + 1; } else hi = m - 1; }
+        if (k < 0) return;
+        let s = k; while (s > 0 && rows[s - 1].t === rows[k].t) s--;
+        if (active[0] === rows[s].p) return;
+        active.forEach((p) => p.classList.remove("now"));
+        active = rows.slice(s, k + 1).map((r) => r.p);
+        active.forEach((p) => p.classList.add("now"));
+        if (follow && Date.now() - userScrolled > 5000) {
+          const top = active[0].getBoundingClientRect().top;
+          const under = box.getBoundingClientRect().bottom;
+          const y = top - under - (innerHeight - under) / 4;
+          scrollBy({ top: y, behavior: notesScroll() });
+        }
+      });
     })();
   </script>
 </Base>

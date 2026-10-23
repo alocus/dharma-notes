@@ -33,6 +33,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           <a href={url("sutra/")}>經論</a>
           <a href={url("search/")}>搜尋</a>
           <a href={url("guide/")}>說明</a>
+          <a href={url("about/")}>關於</a>
           <button class="theme-toggle" type="button" aria-label="切換深淺色">◐</button>
         </nav>
       </div>
@@ -41,7 +42,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       <slot />
     </main>
     <footer class="site-foot">
-      <p>內容整理自法師公開講經影片。筆記為學習輔助：法義以法師原講為準，經文字句以 CBETA 為準。<a href={url("guide/")}>閱讀說明</a></p>
+      <p>內容整理自法師公開講經影片。筆記為學習輔助：法義以法師原講為準，經文字句以 CBETA 為準。本站內容免費流通，請勿用於商業用途。<a href={url("about/")}>關於本站</a>・<a href={url("guide/")}>閱讀說明</a></p>
     </footer>
     <script is:inline>
       document.querySelector(".theme-toggle").addEventListener("click", () => {

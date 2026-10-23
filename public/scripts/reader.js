@@ -1,4 +1,4 @@
-// 筆記 reader: citation popovers, the docked YouTube player, TOC highlight.
+// 筆記 reader: citation popovers, the docked YouTube player with a follow-along transcript, TOC highlight.
 (() => {
   const art = document.querySelector("article[data-transcript]");
   if (!art) return;
@@ -111,44 +111,66 @@
   try { if (localStorage.getItem("cites") === "0") setCites(false); } catch (e) {}
   tog.addEventListener("click", () => { closePop(); setCites(body.classList.contains("hide-cites")); });
 
-  // ---------- player ----------
+  // ---------- player (open by default) + follow-along transcript ----------
   const box = document.getElementById("player");
-  let yt = null, ytReady = null, pending = null;
-  function ensurePlayer() {
-    if (ytReady) return ytReady;
-    box.classList.add("open");
-    ytReady = new Promise((resolve) => {
-      const make = () => {
-        yt = new YT.Player("yt", {
-          videoId, playerVars: { rel: 0, modestbranding: 1, playsinline: 1 },
-          events: { onReady: () => resolve(yt) },
-        });
-      };
-      if (window.YT?.Player) return make();
-      window.onYouTubeIframeAPIReady = make;
-      const s = document.createElement("script");
-      s.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(s);
+  const player = box && videoId ? window.notesPlayer(box, videoId) : null;
+  const play = (sec) => player?.play(sec);
+  if (player) {
+    player.ensure();
+    document.querySelector("[data-open-player]")?.addEventListener("click", async () => {
+      box.scrollIntoView({ behavior: notesScroll(), block: "nearest" });
+      (await player.ensure()).playVideo();
     });
-    return ytReady;
-  }
-  async function play(sec) {
-    if (!videoId) return;
-    box.classList.add("open");
-    const p = await ensurePlayer();
-    p.seekTo(sec, true); p.playVideo();
-  }
-  if (box) {
-    document.querySelector("[data-open-player]")?.addEventListener("click", () => {
-      box.classList.add("open"); ensurePlayer();
-      box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+    const follow = box.querySelector("[data-follow]");
+    const followBtn = box.querySelector("[data-toggle-follow]");
+    let rows = null, active = [], userScrolled = 0;
+    const setFollow = (on) => {
+      box.classList.toggle("no-follow", !on);
+      followBtn.textContent = `逐字稿：${on ? "開" : "關"}`;
+      followBtn.setAttribute("aria-pressed", String(on));
+      try { localStorage.setItem("follow", on ? "1" : "0"); } catch (e) {}
+    };
+    try { if (localStorage.getItem("follow") === "0") setFollow(false); } catch (e) {}
+    followBtn.addEventListener("click", () => setFollow(box.classList.contains("no-follow")));
+
+    // paragraphs after the title block; each keeps its own time or inherits the last one
+    loadData().then((data) => {
+      if (!data) { follow.innerHTML = '<p class="muted">逐字稿載入失敗。</p>'; return; }
+      const title = data.lines.findIndex((x) => x.startsWith("# "));
+      const start = data.lines.findIndex((x, i) => i > title && x.trim() === "---") + 1;
+      let last = null, html = "";
+      rows = [];
+      data.lines.forEach((raw, i) => {
+        const text = raw.trim().replace(/^> /, "").replace(/\*\*/g, "");
+        if (i < start || !text) return;
+        const own = data.t[i + 1];
+        if (own) last = own[0];
+        if (last == null) return;
+        rows.push({ t: last, own: !!own });
+        html += `<p data-i="${rows.length - 1}"><span class="tm">${own ? fmt(own[0]) : ""}</span>${esc(text)}</p>`;
+      });
+      follow.innerHTML = html || '<p class="muted">這一講沒有時間對照的逐字稿。</p>';
     });
-    box.querySelector("[data-close-player]").addEventListener("click", () => {
-      yt?.pauseVideo(); box.classList.remove("open");
+    follow.addEventListener("click", (ev) => {
+      const p = ev.target.closest("p[data-i]");
+      if (p) play(rows[p.dataset.i].t);
     });
-    const mini = box.querySelector("[data-mini]");
-    mini.addEventListener("click", () => {
-      mini.textContent = box.classList.toggle("mini") ? "放大" : "縮小";
+    notesOnManualScroll(follow, () => { userScrolled = Date.now(); });
+
+    player.onTime((now) => {
+      if (!rows?.length || box.classList.contains("no-follow")) return;
+      // last row starting at or before now (rows are in time order)
+      let lo = 0, hi = rows.length - 1, k = -1;
+      while (lo <= hi) { const m = (lo + hi) >> 1; if (rows[m].t <= now) { k = m; lo = m + 1; } else hi = m - 1; }
+      if (k < 0) return;
+      let s = k; while (s > 0 && rows[s - 1].t === rows[k].t) s--;
+      if (active[0] === s) return;
+      active.forEach((i) => follow.children[i]?.classList.remove("on"));
+      active = [];
+      for (let i = s; i <= k; i++) { follow.children[i].classList.add("on"); active.push(i); }
+      if (Date.now() - userScrolled > 5000)
+        follow.scrollTo({ top: follow.children[s].offsetTop - follow.clientHeight / 4, behavior: notesScroll() });
     });
   }
 
@@ -161,7 +183,7 @@
         links.forEach((l) => l.classList.remove("on"));
         byId.get(e.target.id)?.classList.add("on");
       }
-    }, { rootMargin: "0px 0px -75% 0px" });
+    }, { rootMargin: `-${box?.offsetHeight ?? 0}px 0px -60% 0px` });
     body.querySelectorAll("h2[id]").forEach((h) => io.observe(h));
   }
 })();

@@ -11,6 +11,12 @@ import { url } from "../lib/data";
   <script is:inline src={url("pagefind/pagefind-ui.js")}></script>
   <script is:inline>
     window.addEventListener("DOMContentLoaded", () => {
+      // the index is made by `npm run build`; `npm run dev` has none until `npm run index:dev`
+      if (typeof PagefindUI === "undefined") {
+        document.getElementById("search").innerHTML =
+          '<p class="raw-note">搜尋索引尚未產生。本機開發請先執行 <code>npm run build && npm run index:dev</code>，或用 <code>npm run preview</code> 預覽建置結果。</p>';
+        return;
+      }
       const ui = new PagefindUI({
         element: "#search", showSubResults: true,
         // the zh index holds single characters, so space them out to require every one (AND)

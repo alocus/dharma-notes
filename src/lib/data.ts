@@ -93,8 +93,10 @@ export const multiChannel = site.channels.length > 1;
 export const channelLabel = (c: Channel) => teacherShort(c.teacher) ?? c.name;
 export const teacherShort = (t: string | null) => t?.split(/[（(；;，,]/)[0].trim() ?? null;
 
+// notes metadata can carry markdown bold; shown as plain text
+export const plain = (text: string) => (text || "").replace(/\*\*/g, "");
 export function clip(text: string, n: number): string {
-  const t = (text || "").replace(/\*\*/g, "");
+  const t = plain(text);
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
 
@@ -109,6 +111,8 @@ export const seriesUrl = (c: Channel, s: Series) => url(`${c.slug}/${s.slug}/`);
 export const entityUrl = (type: string, name: string) => url(`e/${type}/${name}/`);
 export const sutraUrl = (id: string) => url(`sutra/${id}/`);
 export const cbetaUrl = (id: string) => `https://cbetaonline.dila.edu.tw/zh/${id}`;
+// takedown requests and corrections
+export const feedbackUrl = "https://github.com/alocus/dharma-notes/issues";
 
 export function hasEntity(type: string, name: string) { return !!entities[type]?.[name]; }
 

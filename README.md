@@ -51,6 +51,7 @@ npm run export    # re-snapshot from ../mani (uses mani's venv)
 npm run dev       # local dev server
 npm run build     # astro build + sitemap + pagefind index → dist/
 npm run preview   # serve dist/ at http://localhost:4321/dharma-notes/
+npm run index:dev # after a build: copy the search index into public/ so search works under `npm run dev`
 ```
 
 After `npm run export`, commit `content/` and `public/data/`. CI builds from the committed snapshot.
@@ -67,6 +68,7 @@ After `npm run export`, commit `content/` and `public/data/`. CI builds from the
 | `/sutra/`, `/sutra/<CBETA id>/` | Sutra index and sutra pages |
 | `/search/` | Search |
 | `/guide/` | Reading guide (閱讀說明) |
+| `/about/` | About the project (關於本站): principles, pipeline, usage notice |
 | `/sitemap-index.xml` | Sitemap |
 
 ## Deploy
