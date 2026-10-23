@@ -5,13 +5,14 @@ A static site of Dharma talks: study notes (學習筆記), full transcripts (逐
 ## How it works
 
 ```
-../mani  ──scripts/export.py──▶  content/ + public/data/  ──astro build + pagefind──▶  dist/
+mani  ──scripts/export.py──▶  content/ + public/data/  ──astro build + pagefind──▶  dist/
 ```
 
 ### `site.config.json`
 
 | Key | Meaning |
 |---|---|
+| `mani` | Path to the mani checkout, relative to this site (`../../mani`). `$MANI` or `--mani` overrides it. |
 | `title` | Site name |
 | `tagline` | Home-page intro |
 | `channels` | Which mani channels to publish. Any channel with notes works. |
@@ -21,7 +22,7 @@ A static site of Dharma talks: study notes (學習筆記), full transcripts (逐
 
 ### `scripts/export.py`
 
-The exporter reads `../mani` and never writes there.
+The exporter reads mani and never writes there. It re-runs itself under mani's venv (`pipelines/knowledgebase/.venv`).
 
 - **Notes:** written to `content/notes/<channel>/<series>/<NN>.md`, after rewriting into the public voice (next section).
 - **Per-talk data:** `content/lessons/…json` holds the verified quotes, related talks and the talk's main names.
@@ -47,7 +48,7 @@ Every export ends by printing any line that still pairs the teacher with 誤 (`p
 ## Commands
 
 ```sh
-npm run export    # re-snapshot from ../mani (uses mani's venv)
+npm run export    # re-snapshot from mani (path in site.config.json; uses mani's venv)
 npm run dev       # local dev server
 npm run build     # astro build + sitemap + pagefind index → dist/
 npm run preview   # serve dist/ at http://localhost:4321/dharma-notes/

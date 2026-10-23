@@ -1,6 +1,6 @@
 """Snapshot the channels listed in site.config.json from mani into this site.
 
-Reads ../mani (never writes there) and writes:
+Reads mani (never writes there) and writes:
   content/site.json                    site title + channels -> series -> lessons
   content/notes/<ch>/<s>/<NN>.md       note body in the public voice (scripts/public_voice.py)
   content/lessons/<ch>/<s>/<NN>.json   verified quotes, related talks, the talk's main names
@@ -12,13 +12,16 @@ Everything published is derived from the notes, their transcripts and verified
 quotes, plus mani's entity dictionary and 丁福保《佛學大辭典》 glosses. mani's
 private insight graph (insight_edges, 圖譜.json) is never read.
 
-Run with mani's venv (it needs PyYAML and mani's lesson_key):
-  ../mani/pipelines/knowledgebase/.venv/bin/python scripts/export.py
+Where mani lives: --mani, else $MANI, else "mani" in site.config.json (relative
+to this site). Any python can start it; it re-runs itself under mani's venv,
+which has PyYAML and mani's lesson_key:
+  python3 scripts/export.py
 """
 import argparse
 import csv
 import json
 import math
+import os
 import re
 import shutil
 import sqlite3
@@ -26,9 +29,34 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
-import yaml
-
 SITE = Path(__file__).resolve().parents[1]
+CONFIG = SITE / "site.config.json"
+
+
+def mani_root(argv: list[str], config: Path) -> Path:
+    """--mani, else $MANI, else site.config.json "mani" (relative to the site)."""
+    for i, a in enumerate(argv):
+        if a == "--mani" and i + 1 < len(argv):
+            return Path(argv[i + 1]).expanduser().resolve()
+        if a.startswith("--mani="):
+            return Path(a.split("=", 1)[1]).expanduser().resolve()
+    if os.environ.get("MANI"):
+        return Path(os.environ["MANI"]).expanduser().resolve()
+    rel = json.loads(config.read_text(encoding="utf-8")).get("mani", "../mani")
+    return (SITE / rel).resolve()
+
+
+# re-run under mani's venv unless already there
+_cfg_arg = next((sys.argv[i + 1] for i, a in enumerate(sys.argv[:-1]) if a == "--config"), None)
+MANI = mani_root(sys.argv[1:], Path(_cfg_arg) if _cfg_arg else CONFIG)
+_venv = MANI / "pipelines" / "knowledgebase" / ".venv"
+if __name__ == "__main__" and Path(sys.prefix).resolve() != _venv.resolve():
+    if not (_venv / "bin" / "python").exists():
+        sys.exit(f"mani venv not found: {_venv}\nset \"mani\" in site.config.json, $MANI or --mani")
+    os.execv(str(_venv / "bin" / "python"), [str(_venv / "bin" / "python"), __file__, *sys.argv[1:]])
+
+import yaml  # noqa: E402
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import public_voice  # noqa: E402
 
@@ -317,11 +345,11 @@ def snippet(text: str, name: str, width: int = 36) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mani", default=str(SITE.parent / "mani"))
-    ap.add_argument("--config", default=str(SITE / "site.config.json"))
-    args = ap.parse_args()
-    mani = Path(args.mani).resolve()
-    cfg = json.loads(Path(args.config).read_text(encoding="utf-8"))
+    ap.add_argument("--mani", help='mani checkout (default: $MANI, else "mani" in site.config.json)')
+    ap.add_argument("--config", default=str(CONFIG))
+    ap.parse_args()
+    mani = MANI
+    cfg = json.loads(Path(_cfg_arg or CONFIG).read_text(encoding="utf-8"))
     sys.path.insert(0, str(mani / "pipelines" / "knowledgebase"))
     from src import lesson_key  # the one owner of lesson numbering
 
