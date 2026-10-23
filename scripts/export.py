@@ -222,7 +222,8 @@ def export_channel(ch: str, mani: Path, lesson_key, lessons: dict) -> dict:
                 continue
             index[nn(no)] = {"no": nn(no), "title": f.stem, "scope": "", "has_note": False,
                              "has_transcript": True, "_final": f, "raw": True, "_pl": pl}
-        if not index:
+        # a series is published once it has notes; transcript-only ones wait
+        if not any(e["has_note"] for e in index.values()):
             continue
 
         tshort = teacher_short(s["teacher"])
