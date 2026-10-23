@@ -1,6 +1,7 @@
 ---
 import Base from "../../../../layouts/Base.astro";
 import Notice from "../../../../components/Notice.astro";
+import PlayerBar from "../../../../components/PlayerBar.astro";
 import {
   allLessons, url, lessonUrl, seriesUrl, lessonTitle, refTitle, lessonByKey, clip, noteMarkdown, lessonExtra,
   sutraData, sutraUrl, plain, entityUrl, hasEntity, cbetaUrl, channelLabel, multiChannel, type Located,
@@ -65,10 +66,7 @@ const sutraTitle = (id: string) => sutraData.sutras[id]?.title ?? id;
             <div class="player-frame"><div data-yt></div></div>
             <div class="follow" data-follow data-pagefind-ignore tabindex="0" role="region" aria-label="逐字稿跟讀"><p class="muted">逐字稿載入中…</p></div>
           </div>
-          <div class="player-bar">
-            <span class="player-hint">點筆記中的 <span style="color:var(--mark)">●</span> 出處標記，或點下方逐字稿，可跳到影片該處</span>
-            <span><button type="button" data-toggle-follow aria-pressed="true">逐字稿：開</button>　<button type="button" data-mini>縮小</button>　<button type="button" data-close-player>關閉</button></span>
-          </div>
+          <PlayerBar toNote follow="跟讀逐字稿" hint="點筆記中的 ● 出處標記或下方逐字稿，影片跳到該處；點「↓ 筆記」回到筆記對應段落。" />
         </div>
       )}
 

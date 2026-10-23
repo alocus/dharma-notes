@@ -127,7 +127,6 @@
     let rows = null, active = [], userScrolled = 0;
     const setFollow = (on) => {
       box.classList.toggle("no-follow", !on);
-      followBtn.textContent = `逐字稿：${on ? "開" : "關"}`;
       followBtn.setAttribute("aria-pressed", String(on));
       try { localStorage.setItem("follow", on ? "1" : "0"); } catch (e) {}
     };
@@ -157,6 +156,26 @@
       if (p) play(rows[p.dataset.i].t);
     });
     notesOnManualScroll(follow, () => { userScrolled = Date.now(); });
+
+    // video -> note: the citation whose time is the latest at or before now (else the earliest)
+    box.querySelector("[data-to-note]")?.addEventListener("click", async () => {
+      const [data, yt] = await Promise.all([loadData(), player.ensure()]);
+      if (!data) return;
+      const now = yt.getCurrentTime?.() ?? 0;
+      let best = null, bestT = -1, first = null, firstT = Infinity;
+      for (const a of body.querySelectorAll("a.c")) {
+        const t = timeOf(data, Number(a.dataset.r.split(/[-,]/)[0]))?.[0];
+        if (t == null) continue;
+        if (t <= now && t > bestT) { best = a; bestT = t; }
+        if (t < firstT) { first = a; firstT = t; }
+      }
+      const a = best ?? first;
+      if (!a) return;
+      const block = a.closest("p, li, blockquote, h2, h3, h4, td") ?? a;
+      const top = block.getBoundingClientRect().top + window.scrollY - box.offsetHeight - 24;
+      window.scrollTo({ top, behavior: notesScroll() });
+      block.classList.remove("flash"); void block.offsetWidth; block.classList.add("flash");
+    });
 
     player.onTime((now) => {
       if (!rows?.length || box.classList.contains("no-follow")) return;

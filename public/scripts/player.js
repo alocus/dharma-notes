@@ -64,7 +64,14 @@ window.notesPlayer = (box, videoId) => {
   });
   const mini = box.querySelector("[data-mini]");
   mini?.addEventListener("click", () => {
-    mini.textContent = box.classList.toggle("mini") ? "放大" : "縮小";
+    const on = box.classList.toggle("mini"), label = on ? "放大播放器" : "縮小播放器";
+    mini.setAttribute("aria-pressed", String(on));
+    mini.setAttribute("aria-label", label); mini.title = label;
+  });
+  const hintBtn = box.querySelector("[data-hint]"), hint = box.querySelector(".player-hint");
+  hintBtn?.addEventListener("click", () => {
+    hint.hidden = !hint.hidden;
+    hintBtn.setAttribute("aria-expanded", String(!hint.hidden));
   });
 
   return { ensure, play, onTime: (f) => listeners.push(f) };

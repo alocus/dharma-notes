@@ -1,5 +1,6 @@
 ---
 import Base from "../../../../layouts/Base.astro";
+import PlayerBar from "../../../../components/PlayerBar.astro";
 import {
   allLessons, url, lessonUrl, seriesUrl, lessonTitle, transcript, fmtTime, channelLabel, multiChannel, type Located,
 } from "../../../../lib/data";
@@ -47,10 +48,7 @@ const yt = l.video_id ? `https://www.youtube.com/watch?v=${l.video_id}` : null;
   {l.video_id && (
     <div class="player open" id="player" data-video={l.video_id}>
       <div class="player-frame"><div data-yt></div></div>
-      <div class="player-bar">
-        <span class="player-hint">{!l.raw && "播放時自動標示目前段落"}</span>
-        <span>{!l.raw && <><button type="button" data-toggle-follow aria-pressed="true">自動捲動：開</button>　</>}<button type="button" data-mini>縮小</button>　<button type="button" data-close-player>關閉</button></span>
-      </div>
+      <PlayerBar follow={l.raw ? undefined : "自動捲動到目前段落"} />
     </div>
   )}
   <div class="ts" data-pagefind-body>
@@ -103,7 +101,6 @@ const yt = l.video_id ? `https://www.youtube.com/watch?v=${l.video_id}` : null;
       try { follow = localStorage.getItem("follow-ts") !== "0"; } catch (e) {}
       const setFollow = (on) => {
         follow = on;
-        btn.textContent = `自動捲動：${on ? "開" : "關"}`;
         btn.setAttribute("aria-pressed", String(on));
         try { localStorage.setItem("follow-ts", on ? "1" : "0"); } catch (e) {}
       };
